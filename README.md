@@ -6,6 +6,8 @@ A repository hosting the Plutonic Client.
 ## What is $\textcolor{red}{\textsf{Plutonic}}$?
 Plutonic is a client that (is soon to) support multiple games.
 
+It contains Aimbot, ESP, among other game-specific features.
+
 ### Current Games Supported
 ✅ Arsenal
 
