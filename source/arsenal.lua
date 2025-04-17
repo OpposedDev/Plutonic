@@ -80,11 +80,13 @@ local atmospherehaze = 0
 
 local hrpatt = Instance.new("Attachment",lplayer.Character.HumanoidRootPart)
 
+local version = "u-1a_041725"
+
 -- Window
 local Window = Rayfield:CreateWindow({
-   Name = "Plutonic | Arsenal (u-1_041625)",
+   Name = "Plutonic | Arsenal ("..version..")",
    Icon = 0,
-   LoadingTitle = "Plutonic | Arsenal (u-1_041625)",
+   LoadingTitle = "Plutonic | Arsenal ("..version..")",
    LoadingSubtitle = "by Opposed Dev",
    Theme = {
         TextColor = Color3.fromRGB(240, 240, 240),
@@ -1113,3 +1115,35 @@ function overrideambience()
 end
 
 Rayfield:LoadConfiguration()
+
+smoothing = SmoothnessRange.CurrentValue
+fov = FovRange.CurrentValue
+showfov = ShowFovToggle.CurrentValue
+usefov = UseFovToggle.CurrentValue
+aimbotteamcheck = aTeamCheckToggle.CurrentValue
+aimbotwallcheck = aWallCheckToggle.CurrentValue
+fovuis.Color = FovColorPicker.Color
+
+chamsoutlinecolor = ChamsOutlineColorPicker.Color
+chamsfillcolor = ChamsFillColorPicker.Color
+chamsoutlinetransparency = ChamsOutlineTRange.CurrentValue
+chamsfilltransparency = ChamsFillTRange.CurrentValue
+
+boxesoutlinecolor = BoxesOutlineColorPicker.Color
+boxesfillcolor = BoxesFillColorPicker.Color
+boxesoutlinetransparency = BoxesOutlineTRange.CurrentValue
+boxesfilltransparency = BoxesFillTRange.CurrentValue
+flyspeed = FlyRange.CurrentValue
+
+triggerbotteamcheck = tTeamCheckToggle.CurrentValue
+
+ambient = AmbientPicker.Color
+brightness = brightnessrange.CurrentValue
+outdoorambient = OutdoorAmbientPicker.Color
+
+atmospheredensity = atmospheredensityrange.CurrentValue
+atmosphereoffset = atmosphereoffsetrange.CurrentValue
+atmospherecolor = AtmosphereColorPicker.Color
+atmospheredecay = AtmosphereDecayPicker.Color
+atmosphereglare = atmosphereglarerange.CurrentValue
+atmospherehaze = atmospherehazerange.CurrentValue
