@@ -1,5 +1,5 @@
 # $\textcolor{red}{\textsf{Plutonic}}$
-A repository hosting the Plutonic Client.
+A repository hosting the Open Source Plutonic Client.
 
 <p align="center"><img src="images/thumbnail.png" alt="Opposed Thumbnail" width="854" height="480"></p>
 
