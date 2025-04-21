@@ -1,3 +1,7 @@
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
 local runs = game:GetService("RunService")
 local players = game:GetService("Players")
 local uis = game:GetService("UserInputService")
@@ -7,6 +11,36 @@ local camera = workspace.CurrentCamera
 local mouse = lplayer:GetMouse()
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local gunproperties = {}
+
+for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
+    local temptable = {}
+
+    if v:FindFirstChild("MaxSpread") then
+        temptable["MaxSpread"] = v.MaxSpread.Value
+    end
+    if v:FindFirstChild("RecoilControl") then
+        temptable["RecoilControl"] = v.RecoilControl.Value
+    end
+    if v:FindFirstChild("ReloadTime") then
+        temptable["ReloadTime"] = v.ReloadTime.Value
+    end
+    if v:FindFirstChild("FireRate") then
+        temptable["FireRate"] = v.FireRate.Value
+    end
+    if v:FindFirstChild("Range") then
+        temptable["Range"] = v.Range.Value
+    end
+    if v:FindFirstChild("Auto") then
+        temptable["Auto"] = v.Auto.Value
+    end
+    if v:FindFirstChild("Speed%") then
+        temptable["Speed%"] = v["Speed%"].Value
+    end
+
+    gunproperties[v.Name] = temptable
+end
 
 local partcancollide = {}
 
@@ -23,6 +57,7 @@ local usefov = false
 local aimbotteamcheck = true
 local aimbotwallcheck = true
 local aimbotkeybind = Enum.UserInputType.MouseButton2
+local aimbotparts = {"Head"}
 local aimbotconnect = nil
 
 local fovgui = Instance.new("ScreenGui",game.CoreGui)
@@ -61,9 +96,18 @@ local flyspeed = 50
 local noclipconnect = nil
 
 local triggerbotteamcheck = true
+local tbreleasedelay = 10
 local triggerbotconnect = nil
 
+local hbextenderconnect = nil
+local hhbsize = 1
+
 local infammoconnect = nil
+local spreadconnect = nil
+local recoilconnect = nil
+local speedconnect = nil
+
+local weaponchamsconnect = nil
 
 local ambientconnect = nil
 
@@ -80,7 +124,7 @@ local atmospherehaze = 0
 
 local hrpatt = Instance.new("Attachment",lplayer.Character.HumanoidRootPart)
 
-local version = "u-1a_041725"
+local version = "u-2_042025"
 
 -- Window
 local Window = Rayfield:CreateWindow({
@@ -181,6 +225,17 @@ local AimbotToggle = AimTab:CreateToggle({
     end,
 })
 
+local AimbotParts = AimTab:CreateDropdown({
+   Name = "Targeted Parts",
+   Options = {"Head","UpperTorso","LowerTorso"},
+   CurrentOption = {"Head"},
+   MultipleOptions = true,
+   Flag = "aimbotparts", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Options)
+      aimbotparts = Options
+   end,
+})
+
 AimTab:CreateDivider()
 
 local SmoothnessRange = AimTab:CreateSlider({
@@ -273,6 +328,18 @@ local TriggerbotToggle = AimTab:CreateToggle({
     end,
 })
 
+local triggerbotreleasedelay = AimTab:CreateSlider({
+   Name = "Release Delay",
+   Range = {0, 50},
+   Increment = 1,
+   Suffix = "Frames",
+   CurrentValue = 10,
+   Flag = "tbdelay", 
+   Callback = function(value)
+      tbreleasedelay = value
+   end,
+})
+
 AimTab:CreateDivider()
 
 local tTeamCheckToggle = AimTab:CreateToggle({
@@ -282,6 +349,37 @@ local tTeamCheckToggle = AimTab:CreateToggle({
     Callback = function(value)
         triggerbotteamcheck = value
     end,
+})
+
+-- hitboxes
+local HBSection = AimTab:CreateSection("Hitboxes")
+local HBToggle = AimTab:CreateToggle({
+    Name = "Override Hitboxes",
+    CurrentValue = false,
+    Flag = "hbextender",
+    Callback = function(value)
+        if value then
+            hbextenderconnect = runs.RenderStepped:Connect(hitboxextender)
+        else
+            if hbextenderconnect then
+                hbextenderconnect:Disconnect()
+
+                hitboxextender(true)
+            end
+        end
+    end,
+})
+
+local HHBRange = AimTab:CreateSlider({
+   Name = "Head Hitbox Size",
+   Range = {1, 6},
+   Increment = 0.1,
+   Suffix = "Studs",
+   CurrentValue = 1,
+   Flag = "hhbrange", 
+   Callback = function(value)
+      hhbsize = value
+   end,
 })
 
 -- Chams
@@ -421,6 +519,48 @@ local BoxesFillTRange = VisualTab:CreateSlider({
    end,
 })
 
+-- visuals
+local VisualsSection = SelfTab:CreateSection("Visuals")
+local WeaponChamsToggle = SelfTab:CreateToggle({
+    Name = "Weapon Chams",
+    CurrentValue = false,
+    Flag = "weaponchamstoggle",
+    Callback = function(value)
+        if value then
+            weaponchamsconnect = runs.RenderStepped:Connect(playerweaponchams)
+        else
+            if weaponchamsconnect then
+                weaponchamsconnect:Disconnect()
+            end
+        end
+    end,
+})
+
+local playerweaponcolor = SelfTab:CreateColorPicker({
+    Name = "Weapon Color",
+    Color = Color3.fromRGB(255,255,255),
+    Flag = "weaponcolor", 
+    Callback = function(value)
+    end
+})
+
+local materialenumitems = Enum.Material:GetEnumItems()
+local enumitemstemp = {}
+
+for _,v in pairs(materialenumitems) do
+    table.insert(enumitemstemp,v.Name)
+end
+
+local playerweaponmaterial = SelfTab:CreateDropdown({
+   Name = "Weapon Material",
+   Options = enumitemstemp,
+   CurrentOption = {"ForceField"},
+   MultipleOptions = false,
+   Flag = "weaponmaterial", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Options)
+   end,
+})
+
 -- movement
 local MovementSection = SelfTab:CreateSection("Movement")
 local FlyToggle = SelfTab:CreateToggle({
@@ -467,6 +607,40 @@ local NoclipToggle = SelfTab:CreateToggle({
     end,
 })
 
+SelfTab:CreateDivider()
+
+local SpeedToggle = SelfTab:CreateToggle({
+   Name = "Override Speed",
+   CurrentValue = false,
+   Flag = "overridespeed",
+   Callback = function(value)
+        if value then
+            speedconnect = runs.RenderStepped:Connect(overridespeed)
+        else
+            if speedconnect then
+                speedconnect:Disconnect()
+            end
+
+            for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
+                if v:FindFirstChild("Speed%") then
+                    v["Speed%"].Value = gunproperties[v.Name]["Speed%"]
+                end
+            end
+        end
+    end,
+})
+
+local SpeedRange = SelfTab:CreateSlider({
+   Name = "Speed",
+   Range = {-100, 500},
+   Increment = 10,
+   Suffix = "Speed",
+   CurrentValue = 0,
+   Flag = "speedrange",
+   Callback = function()
+   end,
+})
+
 -- gunmods
 local GunmodsSection = SelfTab:CreateSection("Gun Mods")
 local InfAmmoToggle = SelfTab:CreateToggle({
@@ -484,46 +658,164 @@ local InfAmmoToggle = SelfTab:CreateToggle({
     end,
 })
 
-local NoSpreadButton = SelfTab:CreateButton({
-   Name = "No Spread",
+SelfTab:CreateDivider()
+
+local SpreadToggle = SelfTab:CreateToggle({
+   Name = "Override Spread",
+   CurrentValue = false,
+   Flag = "overridespread",
+   Callback = function(value)
+        if value then
+            spreadconnect = runs.RenderStepped:Connect(nospread)
+        else
+            if spreadconnect then
+                spreadconnect:Disconnect()
+            end
+
+            for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
+                if v:FindFirstChild("MaxSpread") then
+                    v.MaxSpread.Value = gunproperties[v.Name]["MaxSpread"]
+                end
+            end
+        end
+    end,
+})
+
+local SpreadRange = SelfTab:CreateSlider({
+   Name = "Spread",
+   Range = {0, 100},
+   Increment = 1,
+   Suffix = "Percent",
+   CurrentValue = 0,
+   Flag = "spreadrange",
    Callback = function()
-      nospread()
    end,
 })
 
-local NoRecoilButton = SelfTab:CreateButton({
-   Name = "No Recoil",
+SelfTab:CreateDivider()
+
+local RecoilToggle = SelfTab:CreateToggle({
+   Name = "Override Recoil",
+   CurrentValue = false,
+   Flag = "overriderecoil",
+   Callback = function(value)
+        if value then
+            recoilconnect = runs.RenderStepped:Connect(norecoil)
+        else
+            if recoilconnect then
+                recoilconnect:Disconnect()
+            end
+
+            for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
+                if v:FindFirstChild("RecoilControl") then
+                    v.RecoilControl.Value = gunproperties[v.Name]["RecoilControl"]
+                end
+            end
+        end
+    end,
+})
+
+local RecoilRange = SelfTab:CreateSlider({
+   Name = "Recoil",
+   Range = {0, 100},
+   Increment = 1,
+   Suffix = "Percent",
+   CurrentValue = 0,
+   Flag = "recoilrange",
    Callback = function()
-      norecoil()
    end,
 })
 
-local FastFireButton = SelfTab:CreateButton({
-   Name = "Faster Firerate",
-   Callback = function()
-      fastfire()
-   end,
+SelfTab:CreateDivider()
+
+local FireRateToggle = SelfTab:CreateToggle({
+   Name = "Fast Firerate",
+   CurrentValue = false,
+   Flag = "fastfirerate",
+   Callback = function(value)
+        if value then
+            for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
+                if v:FindFirstChild("FireRate") then
+                    v.FireRate.Value = 0.02
+                end
+            end
+        else
+            for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
+                if v:FindFirstChild("FireRate") then
+                    v.FireRate.Value = gunproperties[v.Name]["FireRate"]
+                end
+            end
+        end
+    end,
 })
 
-local AlwaysAutoButton = SelfTab:CreateButton({
-   Name = "Always Auto",
-   Callback = function()
-      alwaysauto()
-   end,
+SelfTab:CreateDivider()
+
+local AlwaysAutoToggle = SelfTab:CreateToggle({
+   Name = "Always Automatic",
+   CurrentValue = false,
+   Flag = "alwaysauto",
+   Callback = function(value)
+        if value then
+            for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
+                if v:FindFirstChild("Auto") then
+                    v.Auto.Value = true
+                end
+            end
+        else
+            for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
+                if v:FindFirstChild("Auto") then
+                    v.Auto.Value = gunproperties[v.Name]["Auto"]
+                end
+            end
+        end
+    end,
 })
 
-local InstReloadButton = SelfTab:CreateButton({
+SelfTab:CreateDivider()
+
+local InstReloadToggle = SelfTab:CreateToggle({
    Name = "Instant Reload",
-   Callback = function()
-      instreload()
-   end,
+   CurrentValue = false,
+   Flag = "instantreload",
+   Callback = function(value)
+        if value then
+            for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
+                if v:FindFirstChild("ReloadTime") then
+                    v.ReloadTime.Value = 0
+                end
+            end
+        else
+            for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
+                if v:FindFirstChild("ReloadTime") then
+                    v.ReloadTime.Value = gunproperties[v.Name]["ReloadTime"]
+                end
+            end
+        end
+    end,
 })
 
-local IncrRangeButton = SelfTab:CreateButton({
+SelfTab:CreateDivider()
+
+local IncrRangeToggle = SelfTab:CreateToggle({
    Name = "Increased Range",
-   Callback = function()
-      incrrange()
-   end,
+   CurrentValue = false,
+   Flag = "incrrange",
+   Callback = function(value)
+        if value then
+            for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
+                if v:FindFirstChild("Range") then
+                    v.Range.Value = 10000
+                end
+            end
+        else
+            for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
+                if v:FindFirstChild("Range") then
+                    v.Range.Value = gunproperties[v.Name]["Range"]
+                end
+            end
+        end
+    end,
 })
 
 -- lighting
@@ -715,54 +1007,57 @@ function aimbot()
 					if aimbotteamcheck then
 						if v.TeamColor ~= lplayer.TeamColor then
 							if v.Character then
-								if v.Character:FindFirstChild("Head") then
-									local tpos,onscreen = camera:WorldToScreenPoint(v.Character.Head.Position)
-									
-									local tdist = math.huge
-									
-									if onscreen then
-										tdist = (Vector3.new(mouse.ViewSizeX/2,mouse.ViewSizeY/2,0) - Vector3.new(tpos.X,tpos.Y,0)).Magnitude
-									end
-									if tdist < distance then
-										if aimbotwallcheck then
-											local ray = wallcheckRay(teamcheck,v.Character.Head.Position)
-											if not ray then
-												distance = tdist
-												position = v.Character.Head.Position
-											end
-										else
-											distance = tdist
-											position = v.Character.Head.Position
-										end
-									end
-								end
+								for _,option in ipairs(aimbotparts) do
+                                    if v.Character:FindFirstChild(option) then
+                                        local tpos,onscreen = camera:WorldToScreenPoint(v.Character.Head.Position)
+                                        
+                                        local tdist = math.huge
+                                        
+                                        if onscreen then
+                                            tdist = (Vector3.new(mouse.ViewSizeX/2,mouse.ViewSizeY/2,0) - Vector3.new(tpos.X,tpos.Y,0)).Magnitude
+                                        end
+                                        if tdist < distance then
+                                            if aimbotwallcheck then
+                                                local ray = wallcheckRay(teamcheck,v.Character.Head.Position)
+                                                if not ray then
+                                                    distance = tdist
+                                                    position = v.Character.Head.Position
+                                                end
+                                            else
+                                                distance = tdist
+                                                position = v.Character.Head.Position
+                                            end
+                                        end
+                                    end
+                                end
 							end
 						end
 					else
 						if v.Character then
-							if v.Character:FindFirstChild("Head") then
-								local tpos,onscreen = camera:WorldToScreenPoint(v.Character.Head.Position)
-
-								local tdist = math.huge
-
-								if onscreen then
-									tdist = (Vector3.new(mouse.ViewSizeX/2,mouse.ViewSizeY/2,0) - Vector3.new(tpos.X,tpos.Y,0)).Magnitude
-								end
-
-								if tdist < distance then
-									if aimbotwallcheck then
-										local ray = wallcheckRay(teamcheck,v.Character.Head.Position)
-										if not ray then
-											distance = tdist
-											position = v.Character.Head.Position
-										end
-									else
-										distance = tdist
-										position = v.Character.Head.Position
-									end
-								end
-							end
-						end
+                            for _,option in ipairs(aimbotparts) do
+                                if v.Character:FindFirstChild(option) then
+                                    local tpos,onscreen = camera:WorldToScreenPoint(v.Character.Head.Position)
+                                    
+                                    local tdist = math.huge
+                                    
+                                    if onscreen then
+                                        tdist = (Vector3.new(mouse.ViewSizeX/2,mouse.ViewSizeY/2,0) - Vector3.new(tpos.X,tpos.Y,0)).Magnitude
+                                    end
+                                    if tdist < distance then
+                                        if aimbotwallcheck then
+                                            local ray = wallcheckRay(teamcheck,v.Character.Head.Position)
+                                            if not ray then
+                                                distance = tdist
+                                                position = v.Character.Head.Position
+                                            end
+                                        else
+                                            distance = tdist
+                                            position = v.Character.Head.Position
+                                        end
+                                    end
+                                end
+                            end
+                        end
 					end
 				end
 			end
@@ -772,43 +1067,47 @@ function aimbot()
 					if aimbotteamcheck then
 						if v.TeamColor ~= lplayer.TeamColor then
 							if v.Character then
-								if v.Character:FindFirstChild("Head") then
-									local tdist = (camera.CFrame.Position - v.Character.Head.Position).Magnitude
+                                for _,option in ipairs(aimbotparts) do
+                                    if v.Character:FindFirstChild(option) then
+                                        local tdist = (camera.CFrame.Position - v.Character.Head.Position).Magnitude
 
-									if tdist < distance then
-										if aimbotwallcheck then
-											local ray = wallcheckRay(teamcheck,v.Character.Head.Position)
-											if not ray then
-												distance = tdist
-												position = v.Character.Head.Position
-											end
-										else
-											distance = tdist
-											position = v.Character.Head.Position
-										end
-									end
-								end
+                                        if tdist < distance then
+                                            if aimbotwallcheck then
+                                                local ray = wallcheckRay(teamcheck,v.Character.Head.Position)
+                                                if not ray then
+                                                    distance = tdist
+                                                    position = v.Character.Head.Position
+                                                end
+                                            else
+                                                distance = tdist
+                                                position = v.Character.Head.Position
+                                            end
+                                        end
+                                    end
+                                end
 							end
 						end
 					else
 						if v.Character then
-							if v.Character:FindFirstChild("Head") then
-								local tdist = (camera.CFrame.Position - v.Character.Head.Position).Magnitude
+                            for _,option in ipairs(aimbotparts) do
+                                if v.Character:FindFirstChild(option) then
+                                    local tdist = (camera.CFrame.Position - v.Character.Head.Position).Magnitude
 
-								if tdist < distance then
-									if aimbotwallcheck then
-										local ray = wallcheckRay(teamcheck,v.Character.Head.Position)
-										if not ray then
-											distance = tdist
-											position = v.Character.Head.Position
-										end
-									else
-										distance = tdist
-										position = v.Character.Head.Position
-									end
-								end
-							end
-						end
+                                    if tdist < distance then
+                                        if aimbotwallcheck then
+                                            local ray = wallcheckRay(teamcheck,v.Character.Head.Position)
+                                            if not ray then
+                                                distance = tdist
+                                                position = v.Character.Head.Position
+                                            end
+                                        else
+                                            distance = tdist
+                                            position = v.Character.Head.Position
+                                        end
+                                    end
+                                end
+                            end
+                        end
 					end
 				end
 			end
@@ -826,10 +1125,26 @@ function triggerbot()
 	local ray = wallcheckRay(triggerbotteamcheck)
 
 	if not ray then
-		mouse1press()
-		task.wait(0)
+		for i = 0, tbreleasedelay, 1 do
+            task.wait(0)
+            mouse1press()
+        end
 		mouse1release()
 	end
+end
+
+function hitboxextender(reset)
+    for _,v in pairs(players:GetChildren()) do
+        if v.Character then
+            if v.Character:FindFirstChild("HeadHB") then
+                if reset == true and typeof(reset) == "boolean" then
+                    v.Character.HeadHB.Size = Vector3.new(1,1,1)
+                else
+                    v.Character.HeadHB.Size = Vector3.new(hhbsize,hhbsize,hhbsize)
+                end
+            end
+        end
+    end
 end
 
 function playeroccchams()
@@ -1044,55 +1359,31 @@ function infammo()
 end
 
 function nospread()
-	lplayer.PlayerGui.GUI.Client.Variables.currentspread.Value = 0
+    local spreadpercent = SpreadRange.CurrentValue/100
+
+	for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
+        if v:FindFirstChild("MaxSpread") then
+            v.MaxSpread.Value = gunproperties[v.Name]["MaxSpread"]*spreadpercent
+        end
+    end
 end
 
 function norecoil()
+    local recoilpercent = RecoilRange.CurrentValue/100
+
 	for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
 		if v:FindFirstChild("RecoilControl") then
-			v.RecoilControl.Value = 0
-		end
-	end
-end
-
-function instreload()
-	for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
-		if v:FindFirstChild("ReloadTime") then
-			v.ReloadTime.Value = 0
-		end
-	end
-end
-
-function fastfire()
-	for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
-		if v:FindFirstChild("FireRate") then
-			v.FireRate.Value = 0.02
+			v.RecoilControl.Value = gunproperties[v.Name]["RecoilControl"]*recoilpercent
 		end
 	end
 end
 
 function overridespeed()
-	local speed = getrange("Speed Modifier")
-	
+	local speedpercent = SpeedRange.CurrentValue
+
 	for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
 		if v:FindFirstChild("Speed%") then
-			v:FindFirstChild("Speed%").Value = -speed
-		end
-	end
-end
-
-function incrrange()
-	for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
-		if v:FindFirstChild("EquipTime") then
-			v.Range.Value = 10000
-		end
-	end
-end
-
-function alwaysauto()
-	for _,v in pairs(game:GetService("ReplicatedStorage").Weapons:GetChildren()) do
-		if v:FindFirstChild("Auto") then
-			v.Auto.Value = true
+			v["Speed%"].Value = -speedpercent
 		end
 	end
 end
@@ -1104,6 +1395,12 @@ function overrideambience()
 
     if not game.Lighting:FindFirstChild("Atmosphere") then
         Instance.new("Atmosphere",game.Lighting)
+        game.Lighting.Atmosphere.Density = atmospheredensity
+        game.Lighting.Atmosphere.Offset = atmosphereoffset
+        game.Lighting.Atmosphere.Color = atmospherecolor
+        game.Lighting.Atmosphere.Decay = atmospheredecay
+        game.Lighting.Atmosphere.Glare = atmosphereglare
+        game.Lighting.Atmosphere.Haze = atmospherehaze
     else
         game.Lighting.Atmosphere.Density = atmospheredensity
         game.Lighting.Atmosphere.Offset = atmosphereoffset
@@ -1111,6 +1408,22 @@ function overrideambience()
         game.Lighting.Atmosphere.Decay = atmospheredecay
         game.Lighting.Atmosphere.Glare = atmosphereglare
         game.Lighting.Atmosphere.Haze = atmospherehaze
+    end
+end
+
+function playerweaponchams()
+    if camera:FindFirstChild("Arms") then
+        for _,v in pairs(camera.Arms:GetDescendants()) do
+            if v:IsA("BasePart") and v.Name ~= "Left Arm" and v.Name ~= "Right Arm" then
+                v.Color = playerweaponcolor.Color
+                for _,b in pairs(materialenumitems) do
+                    if b.Name == playerweaponmaterial.CurrentOption[1] then
+                        v.Material = b
+                        break
+                    end
+                end
+            end
+        end
     end
 end
 
@@ -1122,6 +1435,7 @@ showfov = ShowFovToggle.CurrentValue
 usefov = UseFovToggle.CurrentValue
 aimbotteamcheck = aTeamCheckToggle.CurrentValue
 aimbotwallcheck = aWallCheckToggle.CurrentValue
+aimbotparts = AimbotParts.CurrentOption
 fovuis.Color = FovColorPicker.Color
 
 chamsoutlinecolor = ChamsOutlineColorPicker.Color
@@ -1136,6 +1450,9 @@ boxesfilltransparency = BoxesFillTRange.CurrentValue
 flyspeed = FlyRange.CurrentValue
 
 triggerbotteamcheck = tTeamCheckToggle.CurrentValue
+tbreleasedelay = triggerbotreleasedelay.CurrentValue
+
+hhbsize = HHBRange.CurrentValue
 
 ambient = AmbientPicker.Color
 brightness = brightnessrange.CurrentValue
